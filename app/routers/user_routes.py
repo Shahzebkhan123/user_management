@@ -17,7 +17,13 @@ Key Highlights:
 - Implements HATEOAS by generating dynamic links for user-related actions, enhancing API discoverability.
 - Utilizes OAuth2PasswordBearer for securing API endpoints, requiring valid access tokens for operations.
 """
-
+from typing import Optional, List
+from fastapi import Query, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import Database
+from app.models.user_model import UserRole
+from app.schemas.user_schemas import UserResponse, UserListResponse
+from app.services.user_service import search_users
 from builtins import dict, int, len, str
 from datetime import timedelta
 from uuid import UUID
@@ -245,3 +251,23 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     if await UserService.verify_email_with_token(db, user_id, token):
         return {"message": "Email verified successfully"}
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+@router.get(
+    "/users",
+    response_model=UserListResponse,
+    tags=["Users"],
+    summary="Search users with filters & pagination",
+)
+async def list_users(
+    q: Optional[str] = Query(None, description="Free-text search in name/email/bio"),
+    role: Optional[UserRole] = Query(None, description="Filter by user role"),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    sort: str = Query("created_at", pattern="^(created_at|email|nickname|last_name)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
+    db: AsyncSession = Depends(Database.get_session),
+):
+    items, total = await search_users(
+        db, q=q, role=role, page=page, size=size, sort=sort, order=order
+    )
+    payload: List[UserResponse] = [UserResponse.model_validate(i, from_attributes=True) for i in items]
+    return {"items": payload, "total": total, "page": page, "size": size}

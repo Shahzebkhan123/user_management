@@ -199,3 +199,48 @@ class UserService:
             await session.commit()
             return True
         return False
+# --- User Search Feature (new) ---
+from typing import Optional, Tuple, List
+from sqlalchemy import select, or_, func, asc, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user_model import User, UserRole
+
+async def search_users(
+    session: AsyncSession,
+    q: Optional[str] = None,
+    role: Optional[UserRole] = None,
+    page: int = 1,
+    size: int = 10,
+    sort: str = "created_at",
+    order: str = "desc",
+) -> Tuple[List[User], int]:
+    stmt = select(User)
+
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(or_(
+            User.email.ilike(like),
+            User.nickname.ilike(like),
+            User.first_name.ilike(like),
+            User.last_name.ilike(like),
+            User.bio.ilike(like),
+        ))
+
+    if role:
+        stmt = stmt.where(User.role == role)
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await session.execute(count_stmt)).scalar_one()
+
+    sort_map = {
+        "created_at": User.created_at,
+        "email": User.email,
+        "nickname": User.nickname,
+        "last_name": User.last_name,
+    }
+    sort_field = sort_map.get(sort, User.created_at)
+    stmt = stmt.order_by(desc(sort_field) if order.lower() == "desc" else asc(sort_field))
+    stmt = stmt.offset((page - 1) * size).limit(size)
+
+    rows = (await session.execute(stmt)).scalars().all()
+    return rows, total
