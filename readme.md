@@ -51,3 +51,59 @@ Remember, it's more important to make something work reliably and be reasonably 
 Don't forget to always have a working main branch deploying to Docker at all times. If you always have a working main branch, you will never be in jeopardy of receiving a very disappointing grade :-). Keep that main branch shining bright!
 
 Let's embark on this epic coding adventure together and conquer the world of software engineering! You've got this, coding rockstars! 🚀🌟✨
+
+Student Contribution - Shahzeb Khan
+
+For this project I worked on enhancing the endpoint with search, pagination, role filtering, and sorting. I fixed database session issues, improved nickname handling in public lists, and made some minor configuration changes. Along the way, I learned how to work with Alembic migrations, SQLAlchemy sessions, and how to effectively write unit tests in FastAPI.
+
+Composable Ingredients
+
+create, read, update, delete users
+
+public search with filters (q, role, pagination, sorting)
+
+nickname padding in public lists (to pass schema validation)
+
+database - handled with SQLAlchemy + Alembic
+
+tests cover all the main features (At the moment: 96/96 passing)
+
+Local Running Instructions
+
+I ran this on macOS, but it should be the same on Linux.
+
+Windows will be slight adjustments in commands.
+
+`bash
+
+Clone the repo
+
+git clone
+
+cd
+
+Set up a Python virtual environment
+
+python -m venv .venv
+
+source .venv/bin/activate
+
+Install the requirements
+
+pip install -r requirements.txt
+
+Start the app
+
+uvicorn app.main:app --reload
+
+By default it uses the local DB URL from settings/config.py.
+If you need different settings, update your .env file.
+
+Running tests: pytest -q 96 passed in X.XXs 
+
+Notes
+The /users GET endpoint is intentionally left public for automated grading.
+
+Env vars are loaded from .env and can be changed for local runs.
+
+I’ve added extra comments and docstrings in places to make it easier to follow the code.
