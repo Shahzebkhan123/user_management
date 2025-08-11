@@ -57,3 +57,6 @@ class Settings(BaseSettings):
 
 # Importable singleton
 settings = Settings()
+
+# NOTE: These environment variables are consumed by both local runs and GitHub Actions.
+# Keep defaults sane for dev; secrets should be injected in CI/CD or runtime.
