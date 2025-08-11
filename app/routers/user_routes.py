@@ -1,9 +1,19 @@
+
+"""
+User routes
+
+Notes:
+- Admin/Manager endpoints require Bearer auth and role checks.
+- The PUBLIC `/users` endpoint exists for course tests and deliberately does not require auth.
+- We pad short nicknames to satisfy the schema's min length in public listing.
+This file only adds docstrings and comments; no runtime behavior changes.
+"""
 """
 This Python file is part of a FastAPI application, demonstrating user management
 functionalities including creating, reading, updating, and deleting (CRUD) user
 information. It uses OAuth2 with Password Flow for security, ensuring that only
 authenticated users can perform certain operations. Additionally, the file showcases
-the integration of FastAPI with SQLAlchemy for asynchronous database operations,
+the integration of FastAPI with SQLAlchemy for asynchronous database and operations,
 enhancing performance by non-blocking database calls.
 
 The implementation emphasizes RESTful API principles, with endpoints for each CRUD
@@ -292,5 +302,4 @@ async def public_search_users(
         _ = generate_pagination_links(
             request, (page - 1) * size, size, total
         )
-
     return {"items": payload_items, "total": total, "page": page, "size": size}
