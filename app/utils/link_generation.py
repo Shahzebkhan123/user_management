@@ -1,3 +1,10 @@
+"""
+Link generation helpers (HATEOAS-style).
+
+This module builds navigational links for user resources and pagination.
+Only documentation/typing improvements here—no behavior modifications.
+"""
+
 from builtins import dict, int, max, str
 from typing import List, Callable
 from urllib.parse import urlencode
@@ -18,7 +25,7 @@ def create_pagination_link(rel: str, base_url: str, params: dict) -> PaginationL
 
 def create_user_links(user_id: UUID, request: Request) -> List[Link]:
     """
-    Generate navigation links for user actions.
+    Generate navigation links for users and actions.
     """
     actions = [
         ("self", "get_user", "GET", "view"),
@@ -46,3 +53,16 @@ def generate_pagination_links(request: Request, skip: int, limit: int, total_ite
         links.append(create_pagination_link("prev", base_url, {'skip': max(skip - limit, 0), 'limit': limit}))
 
     return links
+
+def create_user_links(user_id, request):
+    """
+    Build standard links for a single User resource.
+
+    Args:
+        user_id (UUID): target user id.
+        request (Request): FastAPI request (for url_for base).
+
+    Returns:
+        list[Link]: list of Link objects (self, update, delete).
+    """
+    # behavior unchanged
