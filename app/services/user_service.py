@@ -14,7 +14,8 @@ from app.utils.security import generate_verification_token, hash_password, verif
 from uuid import UUID
 from app.services.email_service import EmailService
 from app.models.user_model import UserRole
-import logging
+import logging 
+
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
