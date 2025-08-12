@@ -1,60 +1,56 @@
-# Define a base stage with a Debian Bookworm base image that includes the latest glibc update
-FROM python:3.12-bookworm as base
+# syntax=docker/dockerfile:1.7
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONFAULTHANDLER=1 \
-    PIP_NO_CACHE_DIR=true \
-    PIP_DEFAULT_TIMEOUT=100 \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    QR_CODE_DIR=/myapp/qr_codes
+############################
+# Builder: install deps into a venv
+############################
+FROM python:3.12-slim-bookworm AS builder
 
-WORKDIR /myapp
+ENV VENV_PATH=/opt/venv \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
-# Update system and specifically upgrade libc-bin to the required security patch version
+# System dependencies needed for psycopg2 (and compiling wheels when needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     gcc \
     libpq-dev \
-    && apt-get install -y libc-bin=2.36-9+deb12u7 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies in /.venv
+# Create virtualenv and install Python deps
+RUN python -m venv $VENV_PATH
+ENV PATH="$VENV_PATH/bin:$PATH"
+
+WORKDIR /app
 COPY requirements.txt .
-RUN python -m venv /.venv \
-    && . /.venv/bin/activate \
-    && pip install --upgrade pip \
-    && pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Define a second stage for the runtime, using the same Debian Bookworm slim image
-FROM python:3.12-slim-bookworm as final
+############################
+# Final runtime image
+############################
+FROM python:3.12-slim-bookworm AS final
 
-# Upgrade libc-bin in the final stage to ensure security patch is applied
-RUN apt-get update && apt-get install -y libc-bin=2.36-9+deb12u7 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy the virtual environment from the base stage
-COPY --from=base /.venv /.venv
-
-# Set environment variable to ensure all python commands run inside the virtual environment
-ENV PATH="/.venv/bin:$PATH" \
+# Use the prebuilt venv from the builder layer
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONFAULTHANDLER=1 \
     QR_CODE_DIR=/myapp/qr_codes
 
-# Set the working directory
+# Create a non-root user
+RUN useradd -m -u 10001 appuser
+
 WORKDIR /myapp
 
-# Create and switch to a non-root user
-RUN useradd -m myuser
-USER myuser
+# Copy only the virtualenv first (stays cached when code changes)
+COPY --from=builder /opt/venv /opt/venv
 
-# Copy application code with appropriate ownership
-COPY --chown=myuser:myuser . .
+# Copy the application code
+COPY --chown=appuser:appuser . .
 
-# Inform Docker that the container listens on the specified port at runtime.
+USER appuser
+
+# Expose the API port
 EXPOSE 8000
 
-# Use ENTRYPOINT to specify the executable when the container starts.
-ENTRYPOINT ["uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+# Start the app (adjust module if your entrypoint differs)
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8000", "--workers", "2"]
